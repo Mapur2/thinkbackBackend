@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoJar - Google Login Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .google-btn {
+            margin: 20px 0;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function GoogleLoginTest() {
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+
+            useEffect(() => {
+                // Initialize Google Identity Services
+                window.google.accounts.id.initialize({
+                    client_id: '609971466122-82l6j3ge5ol4guhkj9n8i11miv532f9e.apps.googleusercontent.com', // Replace with your actual Client ID
+                    callback: handleCredentialResponse,
+                });
+
+                window.google.accounts.id.renderButton(
+                    document.getElementById('google-signin'),
+                    { 
+                        theme: 'outline', 
+                        size: 'large',
+                        width: 300,
+                        text: 'signin_with'
+                    }
+                );
+            }, []);
+
+            const handleCredentialResponse = async (response) => {
+                setLoading(true);
+                setResult(null);
+
+                try {
+                    console.log('Google response:', response);
+                    
+                    const idToken = response.credential;
+                    console.log('ID Token:', idToken);
+
+                    // Send to your backend
+                    const backendResponse = await fetch('http://localhost:8000/api/auth/google', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ idToken }),
+                    });
+
+                    const data = await backendResponse.json();
+                    console.log('Backend response:', data);
+
+                    if (backendResponse.ok) {
+                        setResult({
+                            type: 'success',
+                            message: 'Login successful!',
+                            data: {
+                                token: data.token,
+                                user: data.user,
+                                idToken: idToken.substring(0, 50) + '...' // Show first 50 chars
+                            }
+                        });
+                    } else {
+                        setResult({
+                            type: 'error',
+                            message: 'Backend authentication failed',
+                            data: data
+                        });
+                    }
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    setResult({
+                        type: 'error',
+                        message: 'Authentication failed',
+                        data: { error: error.message }
+                    });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const testBackendConnection = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch('http://localhost:8000/');
+                    const data = await response.json();
+                    setResult({
+                        type: 'success',
+                        message: 'Backend connection successful',
+                        data: data
+                    });
+                } catch (error) {
+                    setResult({
+                        type: 'error',
+                        message: 'Backend connection failed',
+                        data: { error: error.message }
+                    });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <div className="logo">EchoJar</div>
+                    <div className="subtitle">Voice-First Digital Memory Bank</div>
+                    
+                    <div className="google-btn">
+                        <div id="google-signin"></div>
+                    </div>
+
+                    <button 
+                        onClick={testBackendConnection}
+                        style={{
+                            background: '#667eea',
+                            color: 'white',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            marginTop: '10px'
+                        }}
+                    >
+                        Test Backend Connection
+                    </button>
+
+                    {loading && (
+                        <div className="result loading">
+                            Loading...
+                        </div>
+                    )}
+
+                    {result && (
+                        <div className={`result ${result.type}`}>
+                            <strong>{result.message}</strong>
+                            <pre>{JSON.stringify(result.data, null, 2)}</pre>
+                        </div>
+                    )}
+
+                    <div style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
+                        <p><strong>Instructions:</strong></p>
+                        <ol style={{ textAlign: 'left' }}>
+                            <li>Replace 'YOUR_GOOGLE_CLIENT_ID_HERE' with your actual Google Client ID</li>
+                            <li>Make sure your backend is running on localhost:3000</li>
+                            <li>Click "Test Backend Connection" first</li>
+                            <li>Then try Google Sign-In</li>
+                        </ol>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<GoogleLoginTest />, document.getElementById('root'));
+    </script>
+</body>
+</html> 
