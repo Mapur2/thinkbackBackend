@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser"
 import memoryRouter from './routes/memory.js';
 import authRouter from './routes/auth.js';
 import lockedInRouter from './routes/lockedIn.js';
+import wellbeingRouter from './routes/wellbeing.js';
 const app = express()
 
 app.use(cors({
@@ -21,6 +22,7 @@ app.use(cookieParser())
 app.use("/api/auth", authRouter);
 app.use('/api/memory', memoryRouter);
 app.use('/api/locked-in', lockedInRouter);
+app.use('/api/wellbeing', wellbeingRouter);
 
 app.get("/", (req, res) => {
     res.status(200).json({

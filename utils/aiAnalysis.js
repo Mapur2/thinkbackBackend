@@ -147,3 +147,56 @@ export const analyzeDreamContent = async (dreamText) => {
     };
   }
 }; 
+
+export const analyzeMoodTrend = async (moods) => {
+  if (!moods || moods.length < 3) {
+    return { trend: 'Neutral', confidence: 100 };
+  }
+
+  try {
+    const prompt = `
+      Analyze the following sequence of user moods from the past 48 hours. Identify the single most dominant emotional trend.
+      Your response must be a clean, single-line JSON object with two keys: "trend" (e.g., 'Consistently Happy', 'Slightly Stressed', 'Increasingly Sad', 'Energetic', 'Neutral') and "confidence" (a score from 0 to 100).
+      Do not add any extra text.
+      Moods: ${JSON.stringify(moods)}
+    `;
+
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-8b-8192", // Using the smaller, faster model for analysis
+    });
+
+    const response = completion.choices[0]?.message?.content || '{}';
+    return JSON.parse(response);
+
+  } catch (error) {
+    console.error('Mood trend analysis failed:', error);
+    return { trend: 'Neutral', confidence: 0 }; // Default on error
+  }
+}
+
+export const generateWellbeingSuggestion = async (trend) => {
+  try {
+    const suggestionTypes = ['an uplifting movie', 'a lighthearted joke', 'a simple 5-minute mindfulness exercise'];
+    const suggestionRequest = suggestionTypes[Math.floor(Math.random() * suggestionTypes.length)];
+
+    const prompt = `
+      A user's emotional trend is "${trend}". Provide a helpful, concise suggestion for ${suggestionRequest}.
+      Your response must be a clean, single-line JSON object with two keys: "suggestionType" (e.g., "Movie", "Joke", "Exercise") and "suggestion" (the actual content).
+      The suggestion should be short, positive, and encouraging.
+      Do not add any extra text.
+    `;
+    
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-70b-8192", // Using the more creative model for suggestions
+    });
+
+    const response = completion.choices[0]?.message?.content || '{}';
+    return JSON.parse(response);
+
+  } catch (error) {
+    console.error('Wellbeing suggestion generation failed:', error);
+    return null; // Return null on error
+  }
+} 
