@@ -13,48 +13,33 @@ const memorySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['voice', 'text', 'dream'],
-    default: 'voice'
+    enum: ['voice', 'text'], // Simplified types
+    required: true,
   },
-  audioUrl: {
-    type: String, // Cloudinary URL
-    required: function() { return this.type === 'voice'; }
-  },
-  transcription: {
+  description: { // For text memories
     type: String,
-    trim: true
+    trim: true,
   },
-  aiSummary: {
+  audioUrl: { // For voice memories
+    type: String,
+  },
+  imageUrl: { // Optional image for both types
+    type: String,
+  },
+  aiSummary: { // Will be made smaller
     type: String,
     trim: true
   },
   duration: {
-    type: Number, // in seconds
+    type: Number,
     min: 0
   },
-  mood: {
+  mood: { // Will now store 'emoji + mood' from AI
     type: String,
-    enum: ["anger","nostalgic",'joy', 'sadness', 'excitement', 'calm', 'anxiety', 'gratitude', 'curious', 'regret'],
-    required: false
   },
-  tags: [{
+  location: { // Simplified to a string
     type: String,
-    trim: true
-  }],
-  location: {
-    type: {
-      type: String,
-      default: 'Point'
-    },
-    coordinates: [Number] // [longitude, latitude]
-  },
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
-  isArchived: {
-    type: Boolean,
-    default: false
+    trim: true,
   }
 }, { 
   timestamps: true 
@@ -62,7 +47,5 @@ const memorySchema = new mongoose.Schema({
 
 // Index for efficient queries
 memorySchema.index({ userId: 1, createdAt: -1 });
-memorySchema.index({ userId: 1, mood: 1 });
-memorySchema.index({ userId: 1, tags: 1 });
 
 export default mongoose.model('Memory', memorySchema); 

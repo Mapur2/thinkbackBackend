@@ -1,38 +1,50 @@
-import express from 'express';
+import { Router } from 'express';
 import { 
-  createMemory, 
-  getMemories, 
-  getMemoryById, 
-  updateMemory, 
-  deleteMemory,
-  searchMemories,
-  getMemoriesByMood,
-  getMemoriesByDate,
-  getAllMoods,
-  getTimeline,
-  getMemoryReel,
-  getMilestoneMemories
+  getAllMemories, 
+  searchMemories, 
+  getMemoriesByMood, 
+  getMemoriesByDate, 
+  getAvailableMoods,
+  getMilestones,
+  getMemoriesForMilestone,
+  getAITimeline,
+  createVoiceMemory,
+  createTextMemory
 } from '../controllers/memoryController.js';
-import { verifyJWT } from '../middleware/verifyJWT.js';
+import {verifyJWT} from '../middleware/verifyJWT.js';
 import upload from '../middleware/multer.js';
 
-const router = express.Router();
+const router = Router();
 
-// All routes require authentication
+// Secure all routes
 router.use(verifyJWT);
 
-// Memory CRUD operations
-router.post('/create', upload.single('audio'), createMemory);
-router.get('/', getMemories);
+// Create Memory Routes
+router.post(
+  '/text', 
+  upload.single('image'), // Optional image upload
+  createTextMemory
+);
+
+router.post(
+  '/voice', 
+  upload.fields([
+    { name: 'voice', maxCount: 1 },
+    { name: 'image', maxCount: 1 }
+  ]), 
+  createVoiceMemory
+);
+
+// Get Memory Routes
+router.get('/all', getAllMemories);
 router.get('/search', searchMemories);
-router.get('/moods', getAllMoods);
-router.get('/timeline', getTimeline);
-router.get('/timeline/:milestoneId/memories', getMilestoneMemories);
-router.get('/reel', getMemoryReel);
 router.get('/mood/:mood', getMemoriesByMood);
 router.get('/date/:date', getMemoriesByDate);
-router.get('/:id', getMemoryById);
-router.put('/:id', updateMemory);
-router.delete('/:id', deleteMemory);
+router.get('/moods', getAvailableMoods);
+
+// Timeline & Milestone Routes
+router.get('/milestones', getMilestones);
+router.get('/milestone/:milestoneId/memories', getMemoriesForMilestone);
+router.get('/timeline', getAITimeline);
 
 export default router; 

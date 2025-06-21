@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary'
 import fs from 'fs'
+import { ApiError } from './ApiError.js';
 
 cloudinary.config({
     cloud_name:"dl6qnuiud",
@@ -8,39 +9,25 @@ cloudinary.config({
 });
 
 
-const uploadToCloudinary = async (filepath, resourceType = "auto") => {
+const uploadToCloudinary = async (localFilePath) => {
     try {
-        if (!filepath) return null
-        
-        // Determine resource type based on file extension
-        const fileExtension = filepath.split('.').pop().toLowerCase()
-        let cloudinaryResourceType = resourceType
-        
-        if (resourceType === "auto") {
-            if (['mp3', 'wav', 'm4a', 'ogg', 'aac', 'webm'].includes(fileExtension)) {
-                cloudinaryResourceType = "video" // Cloudinary handles audio as video
-            } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-                cloudinaryResourceType = "image"
-            }
+        if (!localFilePath) {
+            throw new ApiError(400, 'File path is required for upload.');
         }
-        
-        const result = await cloudinary.uploader.upload(filepath, {
-            resource_type: cloudinaryResourceType,
-            format: fileExtension === 'webm' ? 'mp3' : undefined, // Convert webm to mp3 for better compatibility
-        })
-        
-        // Clean up the temporary file
-        fs.unlinkSync(filepath)
-        return result
-    }
-    catch (error) {
-        console.log("Cloudinary upload error:", error)
-        // Clean up the temporary file even if upload fails
-        if (fs.existsSync(filepath)) {
-            fs.unlinkSync(filepath)
-        }
-        return null
-    }
-}
 
-export { uploadToCloudinary }
+        const response = await cloudinary.uploader.upload(localFilePath, {
+            resource_type: 'auto',
+            folder: 'echohar',
+        });
+
+        console.log('File uploaded to Cloudinary successfully:', response.url);
+        // fs.unlinkSync(localFilePath); // CRITICAL: This line is removed. Controller will handle cleanup.
+        return response;
+    } catch (error) {
+        // fs.unlinkSync(localFilePath); // CRITICAL: This line is removed. Let controller manage file even on failure.
+        console.error('Cloudinary upload failed:', error);
+        throw new ApiError(500, 'Failed to upload file to Cloudinary.');
+    }
+};
+
+export { uploadToCloudinary };

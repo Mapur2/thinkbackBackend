@@ -57,25 +57,26 @@ export const transcribeAudio = async (filePath) => {
     console.log('File size:', fileStats.size, 'bytes');
 
     // Use Groq SDK for transcription with timeout
-    const transcriptionPromise = groq.audio.transcriptions.create({
+    const transcription = await groq.audio.transcriptions.create({
       file: fs.createReadStream(filePath),
-      model: "whisper-large-v3",
+      model: 'whisper-large-v3',
+      response_format: 'json',
+      temperature: 0.2
     });
 
-    const transcription = await Promise.race([
-      transcriptionPromise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Transcription timeout')), 60000)
-      )
-    ]);
+    // Add robust check for valid transcription text
+    const transcribedText = transcription.text?.trim();
+    if (!transcribedText) {
+      console.error("Transcription resulted in empty text.", transcription);
+      throw new Error("Transcription failed or resulted in empty text. The audio might be silent or in an unsupported format.");
+    }
 
-    console.log('Transcription completed successfully');
-    return transcription.text || 'No transcription available';
+    return { text: transcribedText };
 
   } catch (error) {
-    console.error('Transcription failed:', error.message);
-    console.log('Falling back to mock transcription');
-    return await mockTranscription(filePath);
+    console.error(`Error during transcription for file: ${filePath}`, error);
+    // Re-throw a more user-friendly error
+    throw new ApiError(500, `Audio transcription failed. Details: ${error.message}`);
   }
 };
 

@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 
 const groq = new Groq({
-  apiKey: `${"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"}`,
+  apiKey: `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`,
 });
 export const generateAIAnalyzedTimeline = async ({prompt}) => {
   try {
@@ -9,78 +9,77 @@ export const generateAIAnalyzedTimeline = async ({prompt}) => {
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
-      max_tokens: 500,
     });
 
-    const response = completion.choices[0]?.message?.content || '';
+    const response = completion.choices[0]?.message?.content || '[]';
+    console.log("Raw AI response for timeline:", response); // Log the raw AI response
+
+    // Add a robust parsing block
+    try {
+      const parsedResponse = response;
+      return parsedResponse;
+    } catch (parseError) {
+      console.error('Failed to parse AI timeline response as JSON:', parseError);
+      console.error('AI response that failed parsing:', response);
+      // Return a structured error instead of an empty array
+      return { error: "Failed to parse AI response.", details: parseError.message, rawResponse: response };
+    }
     
-    // Parse JSON response
-    const analysis = response;
-    
-    return {
-      summary: analysis.summary,
-      detectedMood: analysis.detectedMood,
-      topics: analysis.topics || [],
-      suggestedTags: analysis.suggestedTags || ''
-    };
   } catch (error) {
-    console.error('AI Analysis failed:', error);
-    return {
-      summary: 'AI analysis unavailable',
-      detectedMood: mood || 'unknown',
-      topics: [],
-      suggestedTags: ''
-    };
+    console.error('AI Timeline generation failed:', error);
+    // Return a structured error here as well
+    return { error: "AI timeline generation failed.", details: error.message };
   }
 };
-export const generateAIAnalysis = async ({ transcription, title, mood }) => {
+export const generateAIAnalysis = async ({ textContent }) => {
   try {
     const prompt = `
-      Analyze this voice memory and provide insights:
+      Analyze the following text and provide a concise analysis.
+      Text: "${textContent}"
 
-      Transcription: "${transcription || 'No transcription available'}"
-      Title: "${title || 'Untitled'}"
-      User Mood: "${mood || 'Not specified'}"
+      Your tasks:
+      1.  Generate a very short, one-sentence summary (max 15 words).
+      2.  Identify the single most dominant mood.
+      3.  Provide a suitable emoji for that mood.
 
-      Please provide:
-      1. A concise summary (2-3 sentences)
-      2. Detected emotion from the content (joy, sadness, excitement, calm, anxiety, gratitude, curious, regret)
-      3. Key topics mentioned
-      4. Suggested tags (comma-separated)
+      Format your response as a single, clean JSON object. Do not include any extra text or markdown.
 
-      Format your response as JSON:
+      Example Response:
       {
-        "summary": "your summary here",
-        "detectedMood": "emotion",
-        "topics": ["topic1", "topic2"],
-        "suggestedTags": "tag1, tag2, tag3"
+        "summary": "A nostalgic reflection on a past journey and its lasting impact.",
+        "mood": "😊 Nostalgic"
       }
     `;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
-      max_tokens: 500,
+      temperature: 0.2,
     });
 
-    const response = completion.choices[0]?.message?.content || '';
+    const rawResponse = completion.choices[0]?.message?.content || '{}';
+    console.log("Raw AI analysis response:", rawResponse);
+
+    // Find and extract the JSON object from the response
+    const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+    const jsonString = jsonMatch ? jsonMatch[0] : '{}';
+
+    try {
+      return JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('Failed to parse AI analysis response as JSON:', parseError);
+      console.error('AI response that failed parsing:', rawResponse);
+      return {
+        summary: 'AI analysis could not be completed.',
+        mood: '😐 Neutral',
+      };
+    }
     
-    // Parse JSON response
-    const analysis = JSON.parse(response);
-    
-    return {
-      summary: analysis.summary,
-      detectedMood: analysis.detectedMood,
-      topics: analysis.topics || [],
-      suggestedTags: analysis.suggestedTags || ''
-    };
   } catch (error) {
     console.error('AI Analysis failed:', error);
     return {
-      summary: 'AI analysis unavailable',
-      detectedMood: mood || 'unknown',
-      topics: [],
-      suggestedTags: ''
+      summary: 'AI analysis could not be completed.',
+      mood: '😐 Neutral',
     };
   }
 };

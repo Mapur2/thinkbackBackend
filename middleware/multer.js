@@ -12,50 +12,22 @@ const storage = multer.diskStorage({
     }
 })
 
-// File filter for audio files
 const fileFilter = (req, file, cb) => {
-    // Check if it's an audio file
-    if (file.fieldname === 'audio') {
-        const allowedMimes = [
-            'audio/webm',
-            'audio/mp3',
-            'audio/mpeg',
-            'audio/wav',
-            'audio/wave',
-            'audio/x-wav',
-            'audio/m4a',
-            'audio/ogg',
-            'audio/aac',
-            'audio/x-m4a'
-        ]
-        
-        const allowedExtensions = ['.webm', '.mp3', '.wav', '.m4a', '.ogg', '.aac']
-        const fileExtension = path.extname(file.originalname).toLowerCase()
-        
-        // Check MIME type first
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true)
-        }
-        // Fallback to file extension check
-        else if (allowedExtensions.includes(fileExtension)) {
-            console.log(`File accepted by extension: ${fileExtension}, MIME: ${file.mimetype}`)
-            cb(null, true)
-        }
-        else {
-            console.log(`File rejected - Extension: ${fileExtension}, MIME: ${file.mimetype}`)
-            cb(new Error(`Invalid audio file type. Allowed: webm, mp3, wav, m4a, ogg, aac. Got: ${file.mimetype} (${fileExtension})`), false)
-        }
+    const allowedAudioMimes = ['audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/m4a', 'audio/ogg', 'audio/aac', 'audio/x-m4a'];
+    const allowedImageMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (allowedAudioMimes.includes(file.mimetype) || allowedImageMimes.includes(file.mimetype)) {
+        cb(null, true);
     } else {
-        cb(null, true)
+        cb(new Error('Invalid file type. Only audio and image files are allowed.'), false);
     }
-}
+};
 
 const upload = multer({ 
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB limit for audio files
-        files: 1 // Only one file at a time
+        fileSize: 100 * 1024 * 1024, // Increased to 100MB for flexibility
     }
 })
 
